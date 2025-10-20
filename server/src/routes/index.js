@@ -1,5 +1,6 @@
 import express from "express";
 import { generateEphemeralToken } from "../services/openai.service.js";
+import { getSignedUrl } from "../services/elevenlabs.service.js";
 import { handleSearchRequest } from "../controllers/search.controller.js";
 
 const router = express.Router();
@@ -15,6 +16,20 @@ router.post("/session", async (req, res) => {
   } catch (error) {
     console.error("Error generating session token:", error);
     res.status(500).json({ error: "Failed to generate session token" });
+  }
+});
+
+/**
+ * POST /api/elevenlabs/session
+ * Get signed WebSocket URL for ElevenLabs Conversational AI
+ */
+router.post("/elevenlabs/session", async (req, res) => {
+  try {
+    const signedUrl = await getSignedUrl();
+    res.json({ signed_url: signedUrl });
+  } catch (error) {
+    console.error("Error getting ElevenLabs signed URL:", error);
+    res.status(500).json({ error: "Failed to get signed URL" });
   }
 });
 
