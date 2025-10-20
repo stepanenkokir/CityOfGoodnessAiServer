@@ -3,9 +3,11 @@ import { MicrophoneButton } from "./components/MicrophoneButton";
 import { ResultsList } from "./components/ResultsList";
 import { useGeolocation } from "./hooks/useGeolocation";
 import { RealtimeWebRTCClient } from "./services/realtime-webrtc.service";
+import { RealtimeElevenLabsClient } from "./services/realtime-elevenlabs.service";
 import "./App.css";
 
 function App() {
+  const [voiceService, setVoiceService] = useState("openai"); // 'openai' or 'elevenlabs'
   const [isConnected, setIsConnected] = useState(false);
   const [isMicrophoneActive, setIsMicrophoneActive] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -17,25 +19,37 @@ function App() {
   const realtimeClientRef = useRef(null);
   const { latitude, longitude, error: locationError } = useGeolocation();
 
-  // Initialize Realtime WebRTC client
+  // Initialize Realtime client based on selected service
   useEffect(() => {
-    const client = new RealtimeWebRTCClient();
+    const client =
+      voiceService === "openai"
+        ? new RealtimeWebRTCClient()
+        : new RealtimeElevenLabsClient();
     realtimeClientRef.current = client;
 
     // Setup callbacks
     client.onConnected(() => {
-      console.log("Connected to OpenAI via WebRTC");
+      console.log(
+        `Connected to ${voiceService === "openai" ? "OpenAI" : "ElevenLabs"}`
+      );
       setIsConnected(true);
       setError(null);
     });
 
     client.onDisconnected(() => {
-      console.log("Disconnected from OpenAI");
+      console.log(
+        `Disconnected from ${
+          voiceService === "openai" ? "OpenAI" : "ElevenLabs"
+        }`
+      );
       setIsConnected(false);
     });
 
     client.onError((errorMsg) => {
-      console.error("Realtime error:", errorMsg);
+      console.error(
+        `${voiceService === "openai" ? "OpenAI" : "ElevenLabs"} error:`,
+        errorMsg
+      );
       setError(errorMsg);
       setIsConnected(false);
     });
@@ -64,16 +78,20 @@ function App() {
       setIsMicrophoneActive(isActive);
     });
 
-    // Connect to OpenAI (but don't start microphone yet)
+    // Connect to selected service (but don't start microphone yet)
     client.connect().catch((err) => {
       console.error("Failed to connect:", err);
-      setError("Failed to connect to OpenAI");
+      setError(
+        `Failed to connect to ${
+          voiceService === "openai" ? "OpenAI" : "ElevenLabs"
+        }`
+      );
     });
 
     return () => {
       client.disconnect();
     };
-  }, []);
+  }, [voiceService]);
 
   // Update location when available
   useEffect(() => {
@@ -92,6 +110,26 @@ function App() {
         <p className="app-subtitle">
           Find businesses near you in Sacramento County, CA
         </p>
+
+        {/* Voice Service Toggle */}
+        <div className="service-toggle">
+          <button
+            className={`toggle-btn ${
+              voiceService === "openai" ? "active" : ""
+            }`}
+            onClick={() => setVoiceService("openai")}
+          >
+            OpenAI
+          </button>
+          <button
+            className={`toggle-btn ${
+              voiceService === "elevenlabs" ? "active" : ""
+            }`}
+            onClick={() => setVoiceService("elevenlabs")}
+          >
+            ElevenLabs
+          </button>
+        </div>
       </header>
 
       <main className="app-main">
@@ -127,7 +165,10 @@ function App() {
           {!isConnected && (
             <div className="connection-status">
               <div className="spinner"></div>
-              <p>Connecting to OpenAI...</p>
+              <p>
+                Connecting to{" "}
+                {voiceService === "openai" ? "OpenAI" : "ElevenLabs"}...
+              </p>
             </div>
           )}
 
@@ -158,8 +199,11 @@ function App() {
 
       <footer className="app-footer">
         <p>
-          Powered by OpenAI Realtime API (WebRTC) and City of Goodness &copy;
-          2025
+          Powered by{" "}
+          {voiceService === "openai"
+            ? "OpenAI Realtime API"
+            : "ElevenLabs Conversational AI"}{" "}
+          and City of Goodness &copy; 2025
         </p>
       </footer>
     </div>
